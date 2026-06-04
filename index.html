@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Моите Полезни Линкове</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen py-10 px-4">
+
+    <div class="max-w-4xl mx-auto">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-extrabold text-indigo-400 mb-2">🔗 LinkKeeper</h1>
+            <p class="text-slate-400">Контейнеризирано приложение за управление на уеб ресурси</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="md:col-span-1 bg-slate-800 p-6 rounded-2xl shadow-xl h-fit border border-slate-700">
+                <h2 class="text-xl font-bold mb-4 text-indigo-300">Добави нов линк</h2>
+                <form id="linkForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1 text-slate-400">Заглавие</label>
+                        <input type="text" id="title" required placeholder="напр. GitHub Профил" 
+                            class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 text-slate-200">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1 text-slate-400">URL адрес</label>
+                        <input type="url" id="url" required placeholder="https://..." 
+                            class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 text-slate-200">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1 text-slate-400">Кратко описание</label>
+                        <textarea id="description" placeholder="За какво служи този сайт..." rows="3"
+                            class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 text-slate-200"></textarea>
+                    </div>
+                    <button type="submit" 
+                        class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-4 rounded-xl transition duration-200 shadow-lg cursor-pointer">
+                        Запази линка
+                    </button>
+                </form>
+            </div>
+
+            <div class="md:col-span-2">
+                <h2 class="text-2xl font-bold mb-4 text-slate-200 flex items-center gap-2">
+                    Запазени ресурси <span id="count" class="text-sm bg-indigo-900/50 text-indigo-300 px-2.5 py-0.5 rounded-full border border-indigo-700/50">0</span>
+                </h2>
+                <div id="linksContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const linksContainer = document.getElementById('linksContainer');
+        const linkForm = document.getElementById('linkForm');
+        const countSpan = document.getElementById('count');
+
+        // Функция за зареждане на линковете от MongoDB
+        async function loadLinks() {
+            try {
+                const res = await fetch('/api/links');
+                const links = await res.json();
+                
+                countSpan.innerText = links.length;
+                linksContainer.innerHTML = '';
+
+                if(links.length === 0) {
+                    linksContainer.innerHTML = `
+                        <div class="col-span-2 text-center py-10 bg-slate-800/50 rounded-2xl border border-dashed border-slate-700">
+                            <p class="text-slate-500">Все още няма добавени линкове. Бъди първият!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                links.forEach(link => {
+                    const card = document.createElement('div');
+                    card.className = "bg-slate-800 p-5 rounded-2xl border border-slate-700/60 shadow-md flex flex-col justify-between hover:border-slate-600 transition";
+                    card.innerHTML = `
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-100 mb-1">${link.title}</h3>
+                            <p class="text-sm text-slate-400 mb-4">${link.description || 'Няма описание.'}</p>
+                        </div>
+                        <a href="${link.url}" target="_blank" 
+                           class="inline-flex items-center justify-center text-center bg-slate-700 hover:bg-indigo-600 text-slate-200 hover:text-white text-sm font-semibold py-2 px-4 rounded-xl transition duration-150">
+                           Посети сайта ↗
+                        </a>
+                    `;
+                    linksContainer.appendChild(card);
+                });
+            } catch (err) {
+                console.error("Грешка при зареждане на данните:", err);
+            }
+        }
+
+        // Функция за изпращане на нов линк към базата данни
+        linkForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const title = document.getElementById('title').value;
+            const url = document.getElementById('url').value;
+            const description = document.getElementById('description').value;
+
+            try {
+                const res = await fetch('/api/links', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, url, description })
+                });
+
+                if(res.ok) {
+                    linkForm.reset();
+                    loadLinks(); // Презарежда списъка автоматично
+                }
+            } catch (err) {
+                console.error("Грешка при запис:", err);
+            }
+        });
+
+        // Зареди линковете при първоначално отваряне
+        loadLinks();
+    </script>
+</body>
+</html>
